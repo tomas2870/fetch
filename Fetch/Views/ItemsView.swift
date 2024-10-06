@@ -10,7 +10,6 @@ import SwiftUI
 struct ItemsView: View {
     @StateObject var viewModel = ItemsViewViewModel()
     
-    
     var body: some View {
             NavigationStack {
                 ZStack {
@@ -51,9 +50,24 @@ struct ItemsView: View {
                 }
                 .navigationTitle("Items")
                 .scrollContentBackground(.hidden) // Ignore default background
-                .toolbarBackground(Color(red: 244 / 255, green: 235 / 255, blue: 217 / 255), for: .navigationBar)
+                .toolbarBackground(Color(red: 244 / 255, green: 235 / 255, blue: 217 / 255), for: .navigationBar) // Set navbar color to cream
                 .onAppear {
                     viewModel.fetchItems()
+                } // Fetch API
+                // Show error if fetching API failed
+                .alert(isPresented: Binding<Bool>(
+                    get: { viewModel.errorMessage != nil },
+                    set: { _ in viewModel.errorMessage = nil }
+                )) {
+                    Alert(
+                        title: Text("Error"),
+                        message: Text(viewModel.errorMessage ?? "An unknown error occurred"),
+                        primaryButton: .default(Text("Try Again")) {
+                            // Call fetchItems() when "Try Again" is pressed
+                            viewModel.fetchItems()
+                        },
+                        secondaryButton: .cancel()
+                    )
                 }
             }
         }

@@ -15,3 +15,11 @@ struct FetchTests {
     }
 
 }
+
+// Test if network call fails (does app crash) (display error to user)
+
+// Completes but returns no data (does app crash?)
+
+// get back data and the field is malformed (missing data, etc.)
+
+// Simulate bad network calls
