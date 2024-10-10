@@ -6,36 +6,53 @@
 //
 import Foundation
 
-class NetworkService {
-    private var session: URLSession
+protocol NetworkServiceProtocol {
+    func fetch<T: Decodable>(from urlString: String, completion: @escaping (Result<T, Error>) -> Void)
+}
 
-    init(session: URLSession = URLSession.shared) {
+class NetworkService: NetworkServiceProtocol {
+    private var session: URLSession
+    private var decoder: JSONDecoder
+
+    //
+    init(session: URLSession = .shared, decoder: JSONDecoder = JSONDecoder()) {
         self.session = session
+        self.decoder = decoder
     }
 
-    // Generic function to fetch data and decode it into any Decodable model
     func fetch<T: Decodable>(from urlString: String, completion: @escaping (Result<T, Error>) -> Void) {
         guard let url = URL(string: urlString) else {
-            completion(.failure(NSError(domain: "", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            completion(.failure(NetworkError.invalidURL))
             return
         }
 
-        let task = session.dataTask(with: url) { data, _, error in
-            guard let data = data, error == nil else {
-                // If error is nil, provide a fallback error message
-                let errorMessage = error ?? NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                completion(.failure(errorMessage))
+        let task = session.dataTask(with: url) { [weak self] data, _, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                completion(.failure(error))
                 return
             }
-
+            
+            // Ensure we received data
+            guard let data = data, !data.isEmpty else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+            
+            // Try to decode the data using the injected decoder
             do {
-                let decodedData = try JSONDecoder().decode(T.self, from: data)
+                let decodedData = try self.decoder.decode(T.self, from: data)
                 completion(.success(decodedData))
-            } catch let decodingError{
-                completion(.failure(decodingError))
+            } catch {
+                completion(.failure(error))
             }
         }
         task.resume()
     }
 }
 
+enum NetworkError: Error {
+    case invalidURL
+    case noData
+}
